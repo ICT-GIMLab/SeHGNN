@@ -1,0 +1,10 @@
+__pycache__/
+build/
+dist/
+alpha/
+.cache/
+.eggs/
+*.egg-info/
+.coverage
+*.so
+.idea/

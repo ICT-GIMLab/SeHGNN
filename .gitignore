@@ -1,0 +1,53 @@
+__pycache__/
+output/
+
+data/ACM.mat
+data/ACM/
+data/DBLP/
+data/Freebase/
+data/IMDB/
+data/NARS-main/
+data/ogbn_products/
+data/ogbn_proteins/
+data/ogbn_arxiv/
+data/ogbn_papers100M/
+data/ogbn_mag/
+data/complex_nars/ckpts/
+data/complex_nars/train_triplets_mag
+
+.DS_Store
+*.log
+*.pkl
+*.pt
+*.pth
+*.tsv
+*.txt
+*.zip
+!requirements.txt
+!data/DBLP_test_labels.pt
+!data/ACM_test_labels.pt
+
+# in case they are soft links, or just in the git root folder run:
+# find * -type l -not -exec grep -q "^{}$" .gitignore \; -print >> .gitignore
+data/ACM
+data/DBLP
+data/Freebase
+data/IMDB
+data/NARS-main
+data/ogbn_products
+data/ogbn_proteins
+data/ogbn_arxiv
+data/ogbn_papers100M
+data/ogbn_mag
+
+# sparse_tools
+# __pycache__/
+build/
+dist/
+alpha/
+.cache/
+.eggs/
+*.egg-info/
+.coverage
+*.so
+.idea/
