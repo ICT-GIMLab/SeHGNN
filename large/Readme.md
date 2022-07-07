@@ -1,5 +1,7 @@
 # SeHGNN on Ogbn-mag
 
+For environment setup, please refer to the [main page of this repository](https://github.com/ICT-GIMLab/SeHGNN/#requirements).
+
 ## Training without extra embeddings
 
 ```setup

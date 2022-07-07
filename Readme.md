@@ -1,5 +1,7 @@
 # Simple and Efficient Heterogeneous Graph Neural Network (SeHGNN)
 
+The pre-print paper at: [http://arxiv.org/abs/2207.02547](http://arxiv.org/abs/2207.02547)
+
 ## Requirements
 
 #### 1. Some mainstream neural network libraries for GNNs
