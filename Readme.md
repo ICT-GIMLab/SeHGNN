@@ -30,7 +30,9 @@ python setup.py develop
 
 ## Data preparation
 
-For the preliminary experiments and experiments on four middle-scale datasets, please download datasets `DBLP.zip`, `ACM.zip`, `IMDB.zip`, `Freebase.zip` from [the source of HGB benchmark](https://cloud.tsinghua.edu.cn/d/fc10cb35d19047a88cb1/?p=NC), and extract content from these compresesed files under the folder `'./data/'`.
+For the preliminary experiments and experiments on four middle-scale datasets, please download datasets `DBLP.zip`, `ACM.zip`, `IMDB.zip`, `Freebase.zip` from <s> [the source of HGB benchmark](https://cloud.tsinghua.edu.cn/d/fc10cb35d19047a88cb1/?p=NC), and extract content from these compresesed files under the folder `'./data/'`</s>.
+
+**(We are sorry to tell that we just find data division from the HGB benchmark now is different from that in March 2022 when we get the evaluation results in our paper. Temporarily to reproduce the results in our paper, please download these HGB datasets from [our source](https://pan.cstcloud.cn/web/share.html?hash=J93tT6gqRVs) and extract the zip file under the folder `'./data/'`. We will try to fix this in one to two weeks.)**
 
 For the experiments on the large dataset ogbn-mag, the dataset will be automatically downloaded from [OGB Challenge](https://ogb.stanford.edu/docs/nodeprop/#ogbn-mag).
 
