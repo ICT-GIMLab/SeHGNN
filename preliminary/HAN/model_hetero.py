@@ -1,10 +1,13 @@
+import datetime
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch_sparse import SparseTensor
+
 import dgl
 import dgl.function as fn
 from dgl.nn.pytorch import GATConv, GraphConv
-import datetime
 
 
 echo_time = True
@@ -129,7 +132,7 @@ class HANLayer(nn.Module):
                 self.gat_layers.append(GATConv(in_size, out_size, layer_num_heads, dropout, attn_dropout,
                                                activation=F.elu, allow_zero_in_degree=True))
             else:
-                self.gat_layers.append(MeanAggregator(in_size, out_size, dropout, attn_dropout, norm='right',
+                self.gat_layers.append(MeanAggregator(in_size, out_size * layer_num_heads, dropout, attn_dropout, norm='right',
                                                       activation=F.elu, allow_zero_in_degree=True))
         self.semantic_attention = SemanticAttention(in_size=out_size * layer_num_heads)
         self.meta_paths = list(tuple(meta_path) for meta_path in meta_paths)
@@ -157,9 +160,8 @@ class HANLayer(nn.Module):
                             edge_weights = torch.ones(temp_graph.num_edges())
                         else:
                             src, dst, eid = temp_graph.cpu()._graph.edges(0)
-                            from torch_sparse import SparseTensor
                             adj = SparseTensor(row=dst, col=src, value=eid)
-                            perm = torch.argsort(adj.storage.value())
+                            # perm = torch.argsort(adj.storage.value())
 
                             base_ew = 1 / adj.storage.rowcount()
                             base_ew[torch.isnan(base_ew) | torch.isinf(base_ew)] = 0
@@ -170,7 +172,7 @@ class HANLayer(nn.Module):
                             else:
                                 assert False, f'Unknown adj_norm method {self.adj_norm}'
 
-                            edge_weights = edge_weights[perm]
+                            # edge_weights = edge_weights[perm]
                         self._cached_edge_weight[meta_path] = edge_weights.unsqueeze(-1).to(device=temp_graph.device)
 
             if echo_time:

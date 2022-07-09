@@ -90,10 +90,6 @@ def run_model_DBLP(args):
     test_idx = train_val_test_idx['test_idx']
     test_idx = np.sort(test_idx)
 
-    if args.dataset == 'DBLP':
-        labels[test_idx] = torch.load('../../data/DBLP_test_labels.pt', map_location='cpu')
-    elif args.dataset == 'ACM':
-        labels[test_idx] = torch.load('../../data/ACM_test_labels.pt', map_location='cpu')
     labels = torch.LongTensor(labels).to(device)
 
     g = dgl.DGLGraph(adjM+(adjM.T))

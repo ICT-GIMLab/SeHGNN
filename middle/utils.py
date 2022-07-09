@@ -362,6 +362,7 @@ def load_dataset(args):
 
     init_labels[train_idx] = dl.labels_train['data'][train_idx]
     init_labels[val_idx] = dl.labels_train['data'][val_idx]
+    init_labels[test_nid] = dl.labels_test['data'][test_nid]
     if args.dataset != 'IMDB':
         init_labels = init_labels.argmax(axis=1)
     print(len(train_idx), len(val_idx), len(test_idx))
@@ -424,8 +425,6 @@ def load_dataset(args):
         #     src, dst, eid = g._graph.edges(i)
         #     adj = SparseTensor(row=dst.long(), col=src.long())
         #     print(etype, adj)
-
-        init_labels[test_idx] = torch.load(f'{args.root}/DBLP_test_labels.pt')
 
         # g.ndata['feat']['A'] = A # not work
         g.nodes['A'].data['A'] = A
@@ -498,8 +497,6 @@ def load_dataset(args):
         PP = PP.coalesce()
         PP = PP.set_diag()
         adjs = [PP] + adjs[2:]
-
-        init_labels[test_idx] = torch.load(f'{args.root}/ACM_test_labels.pt')
 
         new_edges = {}
         ntypes = set()

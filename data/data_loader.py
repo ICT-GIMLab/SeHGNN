@@ -25,6 +25,7 @@ class data_loader:
         self.links = self.load_links()
         self.labels_train = self.load_labels('label.dat')
         self.labels_test = self.load_labels('label.dat.test')
+        self.labels_test_full = self.load_labels('label.dat.test_full')
 
     def get_sub_graph(self, node_types_tokeep):
         """

@@ -34,4 +34,6 @@ To evaluate results of these two datasets, please submit the result files to the
 
 ## Performance
 
-![image-sehgnn-middle](./image-sehgnn-middle.png)
+We rank 1st at the node classification tasks of the HGB benchmark since March 2022.
+
+![image-sehgnn-middle](./image-sehgnn_middle.png)

@@ -23,6 +23,7 @@ def main(args):
 
     g, adjs, init_labels, num_classes, dl, train_nid, val_nid, test_nid \
         = load_dataset(args)
+    test_nid_full = np.nonzero(dl.labels_test_full['mask'])[0]
 
     for k in adjs.keys():
         adjs[k].storage._value = None
@@ -176,10 +177,7 @@ def main(args):
 
             train_acc = evaluator(labels[:trainval_point], preds[:trainval_point])
             val_acc = evaluator(labels[trainval_point:valtest_point], preds[trainval_point:valtest_point])
-            if args.dataset in ['DBLP', 'ACM']:
-                test_acc = evaluator(labels[valtest_point:total_num_nodes], preds[valtest_point:total_num_nodes])
-            else:
-                test_acc = (0, 0)
+            test_acc = evaluator(labels[valtest_point:total_num_nodes], preds[valtest_point:total_num_nodes])
 
             print(f'Stage {stage-1} history model: (Micro-F1, Macro-F1)\n\t' \
                 + f'train_acc ({train_acc[0]*100:.2f}, {train_acc[1]*100:.2f}) ' \
@@ -193,17 +191,14 @@ def main(args):
                 val_enhance_nid     = val_enhance_offset + trainval_point
                 test_enhance_nid    = test_enhance_offset + valtest_point
                 enhance_nid = torch.cat((val_enhance_nid, test_enhance_nid))
-                if args.dataset == 'Freebase':
-                    extra_enhance_offset = torch.where(confident_mask[total_num_nodes:])[0]
-                    extra_enhance_id = extra_enhance_offset + total_num_nodes
+
+                extra_enhance_offset = torch.where(confident_mask[total_num_nodes:])[0]
+                extra_enhance_id = extra_enhance_offset + total_num_nodes
 
                 val_confident_level = (predict_prob[val_enhance_nid].argmax(1) == labels[val_enhance_nid]).sum() / len(val_enhance_nid)
                 print(f'Stage: {stage}, confident nodes: {len(enhance_nid)} / {total_num_nodes - trainval_point}')
                 print(f'\t\t val confident nodes: {len(val_enhance_nid)},  val confident level: {val_confident_level}')
-                if args.dataset in ['DBLP', 'ACM']:
-                    test_confident_level = (predict_prob[test_enhance_nid].argmax(1) == labels[test_enhance_nid]).sum() / len(test_enhance_nid)
-                else:
-                    test_confident_level = 'unknown'
+                test_confident_level = (predict_prob[test_enhance_nid].argmax(1) == labels[test_enhance_nid]).sum() / len(test_enhance_nid)
                 print(f'\t\ttest confident nodes: {len(test_enhance_nid)}, test confident_level: {test_confident_level}')
             else:
                 confident_mask = torch.abs(predict_prob - 0.5) > args.threshold
@@ -458,10 +453,7 @@ def main(args):
                 raw_preds = torch.cat(raw_preds, dim=0)
                 loss_train = loss_fcn(raw_preds[:trainval_point], labels[:trainval_point]).item()
                 loss_val = loss_fcn(raw_preds[trainval_point:valtest_point], labels[trainval_point:valtest_point]).item()
-                if args.dataset in ['DBLP', 'ACM']:
-                    loss_test = loss_fcn(raw_preds[valtest_point:total_num_nodes], labels[valtest_point:total_num_nodes]).item()
-                else:
-                    loss_test = 0
+                loss_test = loss_fcn(raw_preds[valtest_point:total_num_nodes], labels[valtest_point:total_num_nodes]).item()
 
             if args.dataset != 'IMDB':
                 preds = raw_preds.argmax(dim=-1)
@@ -470,17 +462,14 @@ def main(args):
 
             train_acc = evaluator(preds[:trainval_point], labels[:trainval_point])
             val_acc = evaluator(preds[trainval_point:valtest_point], labels[trainval_point:valtest_point])
-            if args.dataset in ['DBLP', 'ACM']:
-                test_acc = evaluator(preds[valtest_point:total_num_nodes], labels[valtest_point:total_num_nodes])
-            else:
-                test_acc = (0, 0)
+            test_acc = evaluator(preds[valtest_point:total_num_nodes], labels[valtest_point:total_num_nodes])
 
             last_acc_val = val_acc
 
             end = time.time()
             log += f'evaluation Time: {end-start}, Train loss: {loss_train}, Val loss: {loss_val}, Test loss: {loss_test}\n'
-            log += 'Train acc: ({:.4f}, {:.4f}), Val acc: ({:.4f}, {:.4f}), Test acc: ({:.4f}, {:.4f})\n'.format(
-                train_acc[0]*100, train_acc[1]*100, val_acc[0]*100, val_acc[1]*100, test_acc[0]*100, test_acc[1]*100)
+            log += 'Train acc: ({:.4f}, {:.4f}), Val acc: ({:.4f}, {:.4f}), Test acc: ({:.4f}, {:.4f}) ({})\n'.format(
+                train_acc[0]*100, train_acc[1]*100, val_acc[0]*100, val_acc[1]*100, test_acc[0]*100, test_acc[1]*100, total_num_nodes-valtest_point)
 
             if args.store_model:
                 torch.save(model.state_dict(), f'{checkpt_file}_{stage}_{epoch}.pkl')
@@ -597,13 +586,13 @@ def main(args):
 
                 predict_prob = torch.cat((predict_prob, best_pred.softmax(dim=1)), dim=0)
 
-        test_logits = predict_prob[valtest_point:total_num_nodes]
+        test_logits = predict_prob[sort2init][test_nid_full]
         if args.dataset != 'IMDB':
             pred = test_logits.cpu().numpy().argmax(axis=1)
-            dl.gen_file_for_evaluate(test_idx=test_nid, label=pred, file_path=f"{args.dataset}_{args.seed}_{stage}_{checkpt_file.split('/')[-1]}.txt")
+            dl.gen_file_for_evaluate(test_idx=test_nid_full, label=pred, file_path=f"{args.dataset}_{args.seed}_{stage}_{checkpt_file.split('/')[-1]}.txt")
         else:
             pred = (test_logits.cpu().numpy()>0.5).astype(int)
-            dl.gen_file_for_evaluate(test_idx=test_nid, label=pred, file_path=f"{args.dataset}_{args.seed}_{stage}_{checkpt_file.split('/')[-1]}.txt", mode='multi')
+            dl.gen_file_for_evaluate(test_idx=test_nid_full, label=pred, file_path=f"{args.dataset}_{args.seed}_{stage}_{checkpt_file.split('/')[-1]}.txt", mode='multi')
 
     if args.dataset != 'IMDB':
         preds = predict_prob.argmax(dim=1, keepdim=True)
@@ -611,10 +600,7 @@ def main(args):
         preds = (predict_prob > 0.5).int()
     train_acc = evaluator(labels[:trainval_point], preds[:trainval_point])
     val_acc = evaluator(labels[trainval_point:valtest_point], preds[trainval_point:valtest_point])
-    if args.dataset in ['DBLP', 'ACM']:
-        test_acc = evaluator(labels[valtest_point:total_num_nodes], preds[valtest_point:total_num_nodes])
-    else:
-        test_acc = (0, 0)
+    test_acc = evaluator(labels[valtest_point:total_num_nodes], preds[valtest_point:total_num_nodes])
 
     print(f'Stage {stage} history model:\n\t' \
         + f'train_acc ({train_acc[0]*100:.2f}, {train_acc[1]*100:.2f}) ' \
@@ -626,7 +612,7 @@ def main(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='SeHGNN')
     ## For environment costruction
-    parser.add_argument("--seed", type=int, default=0,
+    parser.add_argument("--seeds", nargs='+', type=int, default=[1],
                         help="the seed used in the training")
     parser.add_argument("--dataset", type=str, default="ogbn-mag")
     parser.add_argument("--gpu", type=int, default=0)
@@ -701,6 +687,11 @@ if __name__ == '__main__':
     args.bns = args.bns and args.dataset == 'Freebase' # remove bn for full-batch learning
     if args.dataset == 'ACM':
         args.ACM_keep_F = False
-
+    args.seed = args.seeds[0]
     print(args)
-    main(args)
+    # main(args)
+
+    for seed in args.seeds:
+        args.seed = seed
+        print('Restart with seed =', seed)
+        main(args)

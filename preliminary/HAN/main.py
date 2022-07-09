@@ -39,15 +39,6 @@ def main(args):
         val_mask = val_mask.bool()
         test_mask = test_mask.bool()
 
-    if args.dataset == 'DBLP':
-        labels[test_idx] = torch.load('../../data/DBLP_test_labels.pt', map_location='cpu')
-        new_labels = labels.to(args.device)
-    elif args.dataset == 'ACM_HGB':
-        labels[test_idx] = torch.load('../../data/ACM_test_labels.pt', map_location='cpu')
-        new_labels = labels.to(args.device)
-    else:
-        new_labels = labels.to(args.device)
-
     features = features.to(args.device)
     labels = labels.to(args.device)
     train_mask = train_mask.to(args.device)
@@ -64,22 +55,13 @@ def main(args):
             num_heads=args.num_heads,
             dropout=args.dropout).to(args.device)
     else:
-        if args.use_gat:
-            model = HAN(
-                meta_paths=meta_paths,
-                in_size=features.shape[1],
-                hidden_size=args.hidden_units,
-                out_size=num_classes,
-                num_heads=args.num_heads,
-                dropout=args.dropout, use_gat=True, attn_dropout=args.attn_dropout).to(args.device)
-        else:
-            model = HAN(
-                meta_paths=meta_paths,
-                in_size=features.shape[1],
-                hidden_size=args.hidden_units * args.num_heads[0],
-                out_size=num_classes,
-                num_heads=[1],
-                dropout=args.dropout, use_gat=False, attn_dropout=args.attn_dropout).to(args.device)
+        model = HAN(
+            meta_paths=meta_paths,
+            in_size=features.shape[1],
+            hidden_size=args.hidden_units,
+            out_size=num_classes,
+            num_heads=args.num_heads,
+            dropout=args.dropout, use_gat=args.use_gat, attn_dropout=args.attn_dropout).to(args.device)
 
     stopper = EarlyStopping(patience=args.patience)
     loss_fcn = torch.nn.CrossEntropyLoss()
@@ -122,16 +104,16 @@ def main(args):
 
     stopper.load_checkpoint(model)
 
-    val_loss, val_acc, val_micro_f1, val_macro_f1 = evaluate(model, g, features, new_labels, val_mask, loss_fcn)
+    val_loss, val_acc, val_micro_f1, val_macro_f1 = evaluate(model, g, features, labels, val_mask, loss_fcn)
     print('Val loss {:.4f} | Val Micro f1 {:.4f} | Val Macro f1 {:.4f}'.format(
         val_loss.item(), val_micro_f1, val_macro_f1))
-    test_loss, test_acc, test_micro_f1, test_macro_f1 = evaluate(model, g, features, new_labels, test_mask, loss_fcn)
+    test_loss, test_acc, test_micro_f1, test_macro_f1 = evaluate(model, g, features, labels, test_mask, loss_fcn)
     print('Test loss {:.4f} | Test Micro f1 {:.4f} | Test Macro f1 {:.4f}'.format(
         test_loss.item(), test_micro_f1, test_macro_f1))
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser('HAN')
-    parser.add_argument('-s', '--seed',  nargs='+', type=int, default=[1],
+    parser.add_argument('-s', '--seed', nargs='+', type=int, default=[1],
                         help='Random seeds')
     parser.add_argument('-ld', '--log-dir', type=str, default='results',
                         help='Dir for saving training results')
