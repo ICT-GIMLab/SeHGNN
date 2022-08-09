@@ -29,7 +29,7 @@ python embed_train.py \
     --hidden_dim $embed_size \
     --gamma 10 \
     --lr 0.1 \
-    --max_step 10 \
+    --max_step 500000 \
     --log_interval 10000 \
     -adv \
     --gpu 1 \
