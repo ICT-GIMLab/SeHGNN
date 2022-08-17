@@ -7,13 +7,13 @@
 // #include "cuda/spspmm_diag_cuda.h"
 // #endif
 
-// #ifdef _WIN32
+#ifdef _WIN32
 // #ifdef WITH_CUDA
 // PyMODINIT_FUNC PyInit__spspmm_diag_cuda(void) { return NULL; }
 // #else
-// PyMODINIT_FUNC PyInit__spspmm_diag_cpu(void) { return NULL; }
+PyMODINIT_FUNC PyInit__spspmm_diag_cpu(void) { return NULL; }
 // #endif
-// #endif
+#endif
 
 
 torch::Tensor
