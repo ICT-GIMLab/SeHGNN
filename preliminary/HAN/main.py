@@ -134,6 +134,7 @@ if __name__ == '__main__':
     parser.add_argument("--weight-decay", type=float, default=0.001)
 
     args = parser.parse_args()
+    args.device = args.device if torch.cuda.is_available() else 'cpu'
     print(args)
     for seed in args.seed:
         if seed > 0:

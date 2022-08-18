@@ -77,7 +77,7 @@ def main(args):
     print(f'Current num hops = {args.num_hops}')
 
     if args.dataset == 'Freebase':
-        prop_device = 'cuda:{}'.format(args.gpu)
+        prop_device = 'cuda:{}'.format(args.gpu) if not args.cpu else 'cpu'
     else:
         prop_device = 'cpu'
     store_device = 'cpu'
@@ -146,7 +146,7 @@ def main(args):
     else:
         scalar = None
 
-    device = 'cuda:{}'.format(args.gpu)
+    device = 'cuda:{}'.format(args.gpu) if not args.cpu else 'cpu'
     if args.dataset != 'IMDB':
         labels_cuda = labels.long().to(device)
     else:
@@ -616,6 +616,7 @@ if __name__ == '__main__':
                         help="the seed used in the training")
     parser.add_argument("--dataset", type=str, default="ogbn-mag")
     parser.add_argument("--gpu", type=int, default=0)
+    parser.add_argument("--cpu", action='store_true', default=False)
     parser.add_argument("--root", type=str, default="../data/")
     parser.add_argument("--stages", nargs='+',type=int, default=[300, 300],
                         help="The epoch setting for each stage.")

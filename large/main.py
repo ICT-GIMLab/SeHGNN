@@ -129,7 +129,7 @@ def main(args):
     else:
         scalar = None
 
-    device = "cuda:{}".format(args.gpu)
+    device = "cuda:{}".format(args.gpu) if not args.cpu else 'cpu'
     labels_cuda = labels.long().to(device)
     for run_time in range(10):
         checkpt_file = checkpt_folder + uuid.uuid4().hex
@@ -289,6 +289,8 @@ def main(args):
 
                     label_emb = (label_feats['PPP'] + label_feats['PAP'] + label_feats['PP'] + label_feats['PFP']) / 4
                     check_acc({'label_emb': label_emb}, condition, init_labels, train_nid, val_nid, test_nid)
+            else:
+                label_emb = torch.zeros((num_nodes, n_classes))
 
             label_feats = {k: v[init2sort] for k, v in label_feats.items()}
             label_emb = label_emb[init2sort]
@@ -409,6 +411,7 @@ if __name__ == '__main__':
                         help="the seed used in the training")
     parser.add_argument("--dataset", type=str, default="ogbn-mag")
     parser.add_argument("--gpu", type=int, default=0)
+    parser.add_argument("--cpu", action='store_true', default=False)
     parser.add_argument("--root", type=str, default='../data/')
     parser.add_argument("--emb_path", type=str, default='../data/')
     parser.add_argument("--stages", nargs='+',type=int, default=[300, 300],
