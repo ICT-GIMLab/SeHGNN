@@ -1,5 +1,6 @@
 __pycache__/
 output/
+Freebase_adjs/
 
 data/ACM.mat
 data/ACM/
