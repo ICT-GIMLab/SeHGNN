@@ -8,9 +8,12 @@ The camera-ready paper for AAAI 23 can be found at: [http://arxiv.org/abs/2207.0
 
 * [pytorch](https://pytorch.org/get-started/locally/)
 * [pytorch-geometric](https://pytorch-geometric.readthedocs.io/en/latest/notes/installation.html)
-* [dgl](https://www.dgl.ai/pages/start.html)
 
 Please check your cuda version first and install the above libraries matching your cuda. If possible, we recommend to install the latest versions of these libraries.
+
+* [dgl](https://www.dgl.ai/pages/start.html)
+
+If you want to generate ComplEx embeddings for ogbn-mag, we recommend to install `dgl<1.0`.
 
 #### 2. Other dependencies
 
@@ -26,6 +29,14 @@ cd ..
 
 ## Data preparation
 
-For experiments in Motivation section and on four medium-scale datasets, please download datasets `DBLP.zip`, `ACM.zip`, `IMDB.zip`, `Freebase.zip` from [the source of HGB benchmark](https://cloud.tsinghua.edu.cn/d/fc10cb35d19047a88cb1/?p=NC), and extract content from these compresesed files under the folder `'./data/'`.
+* HGB datasets for node classification
 
-For experiments on the large dataset ogbn-mag, the dataset will be automatically downloaded from OGB challenge.
+These datasets include four medium-scale datasets. Please download them (`DBLP.zip`, `ACM.zip`, `IMDB.zip`, `Freebase.zip`) from [HGB repository](https://github.com/THUDM/HGB) and extract content under the folder `'./data/'`.
+
+* Ogbn-mag
+
+It is a large dataset from [OGB challenge](https://ogb.stanford.edu/docs/leader_nodeprop/#ogbn-mag). Thus dataset will be automatically downloaded for the first time running.
+
+---
+
+If you encounter any issues, please feel free to reach out to me at yangxc96@gmail.com. The previous email address, yangxiaocheng@ict.ac.cn, is no longer in use.

@@ -1,3 +1,5 @@
+# Modified from https://github.com/awslabs/dgl-ke/blob/master/python/dglke/train.py
+
 # -*- coding: utf-8 -*-
 #
 # train.py

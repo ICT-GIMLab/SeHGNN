@@ -1,3 +1,5 @@
+# Modified from https://github.com/THUDM/HGB/blob/master/NC/benchmark/scripts/data_loader.py, aiming to load hgb's datasets.
+
 import os
 import numpy as np
 import scipy.sparse as sp
@@ -6,26 +8,22 @@ from sklearn.metrics import f1_score
 import time
 
 
-class bcolors:
-    HEADER = '\033[95m'
-    OKBLUE = '\033[94m'
-    OKCYAN = '\033[96m'
-    OKGREEN = '\033[92m'
-    WARNING = '\033[93m'
-    FAIL = '\033[91m'
-    ENDC = '\033[0m'
-    BOLD = '\033[1m'
-    UNDERLINE = '\033[4m'
-
-
 class data_loader:
     def __init__(self, path):
         self.path = path
+        if os.path.exists(path):
+            pass
+        elif os.path.exists(path+'.zip'):
+            os.system("unzip {} -d {}".format(path+'.zip', os.path.join(*path.split('/')[:-1])))
+        else:
+            assert False, ('Warning: HGB node classification datasets not downloaded'
+                ', please download them from HGB repository `https://github.com/THUDM/HGB`'
+                ' and put them under `./data/`')
+
         self.nodes = self.load_nodes()
         self.links = self.load_links()
         self.labels_train = self.load_labels('label.dat')
         self.labels_test = self.load_labels('label.dat.test')
-        self.labels_test_full = self.load_labels('label.dat.test_full')
 
     def get_sub_graph(self, node_types_tokeep):
         """
@@ -55,14 +53,14 @@ class data_loader:
                 new_nodes['shift'][nnt] = new_node_id
                 beg = self.nodes['shift'][nt]
                 old_idx.extend(range(beg, beg+cnt))
-                
+
                 cnt_label_train = self.labels_train['count'][nt]
                 new_labels_train['count'][nnt] = cnt_label_train
                 new_labels_train['total'] += cnt_label_train
                 cnt_label_test = self.labels_test['count'][nt]
                 new_labels_test['count'][nnt] = cnt_label_test
                 new_labels_test['total'] += cnt_label_test
-                
+
                 new_node_type += 1
                 new_node_id += cnt
 
@@ -156,7 +154,7 @@ class data_loader:
                         meta_dict[i].append(beg + end[1:])
         return meta_dict
 
-    def gen_file_for_evaluate(self, test_idx, label, file_path, mode='bi'):
+    def gen_file_for_evaluate(self, test_idx, label, file_name, mode='bi'):
         if test_idx.shape[0] != label.shape[0]:
             return
         if mode == 'multi':
@@ -169,24 +167,11 @@ class data_loader:
             label = np.array(label)
         else:
             return
-        with open(file_path, "w") as f:
+        with open(file_name, "w") as f:
             for nid, l in zip(test_idx, label):
                 f.write(f"{nid}\t\t{self.get_node_type(nid)}\t{l}\n")
 
-    def evaluate_train(self, pred, mask=None):
-        idx = self.labels_train['mask'][mask]
-        assert np.all(self.labels_train['mask'][mask])
-        y_true = self.labels_train['data'][mask]
-        micro = f1_score(y_true, pred, average='micro')
-        macro = f1_score(y_true, pred, average='macro')
-        result = {
-            'micro-f1': micro,
-            'macro-f1': macro
-        }
-        return result
-
     def evaluate(self, pred):
-        print(f"{bcolors.WARNING}Warning: If you want to obtain test score, please submit online on biendata.{bcolors.ENDC}")
         y_true = self.labels_test['data'][self.labels_test['mask']]
         micro = f1_score(y_true, pred, average='micro')
         macro = f1_score(y_true, pred, average='macro')
@@ -248,13 +233,13 @@ class data_loader:
 
     def get_edge_info(self, edge_id):
         return self.links['meta'][edge_id]
-    
+
     def list_to_sp_mat(self, li):
         data = [x[2] for x in li]
         i = [x[0] for x in li]
         j = [x[1] for x in li]
         return sp.coo_matrix((data, (i,j)), shape=(self.nodes['total'], self.nodes['total'])).tocsr()
-    
+
     def load_links(self):
         """
         return links dict
@@ -287,7 +272,7 @@ class data_loader:
             total: total number of nodes
             count: a dict of int, number of nodes for each type
             attr: a dict of np.array (or None), attribute matrices for each type of nodes
-            shift: node_id shift for each type. You can get the id range of a type by 
+            shift: node_id shift for each type. You can get the id range of a type by
                         [ shift[node_type], shift[node_type]+count[node_type] )
         """
         nodes = {'total':0, 'count':Counter(), 'attr':{}, 'shift':{}}
@@ -326,4 +311,3 @@ class data_loader:
             shift += nodes['count'][i]
         nodes['attr'] = attr
         return nodes
-

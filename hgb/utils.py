@@ -187,101 +187,6 @@ def check_acc(preds_dict, condition, init_labels, train_nid, val_nid, test_nid, 
         print((torch.stack(mask_test, dim=0).sum(0) > 0).sum() / nc)
 
 
-def train_multi_stage(model, feats, label_feats, labels_cuda, loss_fcn, optimizer, train_loader, enhance_loader, evaluator, predict_prob, gama, mask=None, scalar=None):
-    model.train()
-    device = labels_cuda.device
-    total_loss = 0
-    loss_l1, loss_l2 = 0., 0.
-    iter_num = 0
-    y_true, y_pred = [], []
-
-    for idx_1, idx_2 in zip(train_loader, enhance_loader):
-        idx = torch.cat((idx_1, idx_2), dim=0)
-        L1_ratio = len(idx_1) * 1.0 / (len(idx_1) + len(idx_2))
-        L2_ratio = len(idx_2) * 1.0 / (len(idx_1) + len(idx_2))
-
-        if isinstance(feats, list):
-            batch_feats = [x[idx].to(device) for x in feats]
-        elif isinstance(feats, dict):
-            batch_feats = {k: x[idx].to(device) for k, x in feats.items()}
-        else:
-            assert 0
-        batch_labels_feats = {k: x[idx].to(device) for k, x in label_feats.items()}
-        if mask is not None:
-            batch_mask = {k: x[idx].to(device) for k, x in mask.items()}
-        else:
-            batch_mask = None
-        batch_y = labels_cuda[idx_1]
-        if isinstance(loss_fcn, nn.BCEWithLogitsLoss):
-            extra_weight = 2 * torch.abs(predict_prob[idx_2] - 0.5)
-            extra_y = (predict_prob[idx_2] > 0.5).float()
-        else:
-            extra_weight, extra_y = predict_prob[idx_2].max(dim=1)
-        extra_weight = extra_weight.to(device)
-        extra_y = extra_y.to(device)
-
-        # teacher_soft = predict_prob[idx_2].to(device)
-        # teacher_conf = torch.max(teacher_soft, dim=1, keepdim=True)[0]
-
-        optimizer.zero_grad()
-        if scalar is not None:
-            with torch.cuda.amp.autocast():
-                output_att = model(None, batch_feats, batch_labels_feats, batch_mask)
-                L1 = loss_fcn(output_att[:len(idx_1)], batch_y)
-                if isinstance(loss_fcn, nn.BCEWithLogitsLoss):
-                    L2 = F.binary_cross_entropy_with_logits(output_att[len(idx_1):], extra_y, reduction='none')
-                else:
-                    L2 = F.cross_entropy(output_att[len(idx_1):], extra_y, reduction='none')
-                L2 = (L2 * extra_weight).sum() / len(idx_2)
-                loss_train = L1_ratio * L1 + gama * L2_ratio * L2
-            scalar.scale(loss_train).backward()
-            scalar.step(optimizer)
-            scalar.update()
-        else:
-            output_att = model(None, batch_feats, batch_labels_feats, batch_mask)
-            L1 = loss_fcn(output_att[:len(idx_1)], batch_y)
-            if isinstance(loss_fcn, nn.BCEWithLogitsLoss):
-                L2 = F.binary_cross_entropy_with_logits(output_att[len(idx_1):], extra_y, reduction='none')
-            else:
-                L2 = F.cross_entropy(output_att[len(idx_1):], extra_y, reduction='none')
-            L2 = (L2 * extra_weight).sum() / len(idx_2)
-            loss_train = L1_ratio * L1 + gama * L2_ratio * L2
-            loss_train.backward()
-            optimizer.step()
-
-        # if isinstance(loss_fcn, nn.BCELoss):
-        #     y_pred.append((output_att[:len(idx_1)].data.cpu() > 0).int())
-        #     output_att = torch.sigmoid(output_att)
-        #     assert 0, 'not implement yet'
-        # else:
-        #     y_pred.append(output_att[:len(idx_1)].argmax(dim=-1, keepdim=True).cpu())
-        #     L1 = loss_fcn(output_att[:len(idx_1)], batch_y)
-        #     L3 = teacher_soft * (torch.log(teacher_soft + 1e-8) - torch.log_softmax(output_att[len(idx_1):], dim=1))
-        #     L3 = (teacher_conf * L3).sum(dim=1).mean()
-        # y_true.append(batch_y.cpu())
-
-        # L1 = loss_fcn(output_att[:len(idx_1)],  y)*(len(idx_1)*1.0/(len(idx_1)+len(idx_2)))
-        # teacher_soft = predict_prob[idx_2].to(device)
-        # teacher_prob = torch.max(teacher_soft, dim=1, keepdim=True)[0]
-        # L3 = (teacher_prob*(teacher_soft*(torch.log(teacher_soft+1e-8)-torch.log_softmax(output_att[len(idx_1):], dim=1)))).sum(1).mean()*(len(idx_2)*1.0/(len(idx_1)+len(idx_2)))
-        # loss_train = L1_ratio * L1 + gama * L2_ratio * L3
-
-        y_true.append(batch_y.cpu().to(torch.long))
-        if isinstance(loss_fcn, nn.BCEWithLogitsLoss):
-            y_pred.append((output_att[:len(idx_1)].data.cpu() > 0.).int())
-        else:
-            y_pred.append(output_att[:len(idx_1)].argmax(dim=-1, keepdim=True).cpu())
-        total_loss += loss_train.item()
-        loss_l1 += L1.item()
-        loss_l2 += L2.item()
-        iter_num += 1
-
-    print(loss_l1 / iter_num, loss_l2 / iter_num)
-    loss = total_loss / iter_num
-    approx_acc = evaluator(torch.cat(y_true, dim=0), torch.cat(y_pred, dim=0))
-    return loss, approx_acc
-
-
 def train(model, feats, label_feats, labels_cuda, loss_fcn, optimizer, train_loader, evaluator, mask=None, scalar=None):
     model.train()
     device = labels_cuda.device
@@ -290,7 +195,7 @@ def train(model, feats, label_feats, labels_cuda, loss_fcn, optimizer, train_loa
     y_true, y_pred = [], []
 
     for batch in train_loader:
-        batch = batch.to(device)
+        # batch = batch.to(device)
         if isinstance(feats, list):
             batch_feats = [x[batch].to(device) for x in feats]
         elif isinstance(feats, dict):
@@ -314,71 +219,7 @@ def train(model, feats, label_feats, labels_cuda, loss_fcn, optimizer, train_loa
             scalar.update()
         else:
             output_att = model(batch, batch_feats, batch_labels_feats, batch_mask)
-            L1 = loss_fcn(output_att, batch_y)
-            loss_train = L1
-            loss_train.backward()
-            optimizer.step()
-
-        y_true.append(batch_y.cpu().to(torch.long))
-        if isinstance(loss_fcn, nn.BCEWithLogitsLoss):
-            y_pred.append((output_att.data.cpu() > 0.).int())
-        else:
-            y_pred.append(output_att.argmax(dim=-1, keepdim=True).cpu())
-        total_loss += loss_train.item()
-        iter_num += 1
-    loss = total_loss / iter_num
-    acc = evaluator(torch.cat(y_true, dim=0), torch.cat(y_pred, dim=0))
-    return loss, acc
-
-
-def train_2l(model, feats, label_feats, labels_cuda, loss_fcn, optimizer, train_loader, evaluator, tgt_type, scalar=None):
-    model.train()
-    device = labels_cuda.device
-    total_loss = 0
-    iter_num = 0
-    y_true, y_pred = [], []
-
-    for batch in train_loader:
-        batch = batch.to(device)
-
-        layer2_feats = {k: x[batch] for k, x in feats.items() if k[0] == tgt_type}
-        batch_labels_feats = {k: x[batch] for k, x in label_feats.items()}
-
-        involved_keys = {}
-        for k, v in layer2_feats.items():
-            src = k[-1]
-            if src not in involved_keys:
-                involved_keys[src] = []
-            involved_keys[src].append(torch.unique(v.storage.col()))
-        involved_keys = {k: torch.unique(torch.cat(v)) for k, v in involved_keys.items()}
-
-        for k, v in layer2_feats.items():
-            src = k[-1]
-            old_nnz = v.nnz()
-            layer2_feats[k] = v[:, involved_keys[src]]
-            assert layer2_feats[k].nnz() == old_nnz
-
-        layer1_feats = {k: v[involved_keys[k[0]]] for k, v in feats.items() if k[0] in involved_keys}
-
-        batch1 = {k: v.to(device) for k,v in involved_keys.items()}
-        layer1_feats = {k: v.to(device) for k,v in layer1_feats.items()}
-        batch2 = batch.to(device)
-        layer2_feats = {k: v.to(device) for k,v in layer2_feats.items()}
-        batch_labels_feats = {k: x.to(device) for k, x in batch_labels_feats.items()}
-        batch_y = labels_cuda[batch]
-
-        optimizer.zero_grad()
-        if scalar is not None:
-            with torch.cuda.amp.autocast():
-                output_att = model(layer1_feats, batch1, layer2_feats, batch2, batch_labels_feats)
-                loss_train = loss_fcn(output_att, batch_y)
-            scalar.scale(loss_train).backward()
-            scalar.step(optimizer)
-            scalar.update()
-        else:
-            output_att = model(layer1_feats, batch1, layer2_feats, batch2, batch_labels_feats)
-            L1 = loss_fcn(output_att, batch_y)
-            loss_train = L1
+            loss_train = loss_fcn(output_att, batch_y)
             loss_train.backward()
             optimizer.step()
 
@@ -415,24 +256,13 @@ def load_dataset(args):
     num_classes = dl.labels_train['num_classes']
     init_labels = np.zeros((dl.nodes['count'][0], num_classes), dtype=int)
 
-    val_ratio = 0.2
-    train_nid = np.nonzero(dl.labels_train['mask'])[0]
-    np.random.shuffle(train_nid)
-    split = int(train_nid.shape[0]*val_ratio)
-    val_nid = train_nid[:split]
-    train_nid = train_nid[split:]
-    train_nid = np.sort(train_nid)
-    val_nid = np.sort(val_nid)
+    trainval_nid = np.nonzero(dl.labels_train['mask'])[0]
     test_nid = np.nonzero(dl.labels_test['mask'])[0]
-    test_nid_full = np.nonzero(dl.labels_test_full['mask'])[0]
 
-    init_labels[train_nid] = dl.labels_train['data'][train_nid]
-    init_labels[val_nid] = dl.labels_train['data'][val_nid]
+    init_labels[trainval_nid] = dl.labels_train['data'][trainval_nid]
     init_labels[test_nid] = dl.labels_test['data'][test_nid]
     if args.dataset != 'IMDB':
         init_labels = init_labels.argmax(axis=1)
-
-    print(len(train_nid), len(val_nid), len(test_nid), len(test_nid_full))
     init_labels = torch.LongTensor(init_labels)
 
     # === adjs ===
@@ -640,7 +470,7 @@ def load_dataset(args):
     else:
         assert 0
 
-    return g, adjs, init_labels, num_classes, dl, train_nid, val_nid, test_nid, test_nid_full
+    return g, adjs, init_labels, num_classes, dl, trainval_nid, test_nid
 
 
 class EarlyStopping:

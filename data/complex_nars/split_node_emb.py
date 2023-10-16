@@ -1,3 +1,5 @@
+# Modified from https://github.com/facebookresearch/NARS/blob/main/graph_embed/split_node_emb.py
+
 # Copyright (c) Facebook, Inc. and its affiliates.
 # All rights reserved.
 #

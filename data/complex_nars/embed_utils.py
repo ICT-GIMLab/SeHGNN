@@ -1,3 +1,5 @@
+# Modified from https://github.com/awslabs/dgl-ke/blob/master/python/dglke/dataloader/sampler.py
+
 import numpy as np
 import scipy as sp
 
